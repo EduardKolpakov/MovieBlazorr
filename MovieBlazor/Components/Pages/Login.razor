@@ -1,0 +1,61 @@
+﻿@page "/login"
+@using Fluxor
+@using MovieBlazor.Store.Auth
+@inject IState<AuthState> AuthState
+@inject IDispatcher Dispatcher
+@inject HttpClient Http
+@rendermode InteractiveServer
+<Fluxor.Blazor.Web.StoreInitializer/>
+<h3>Вход</h3>
+
+<input @bind="Username" placeholder="Логин" />
+<input type="password" @bind="Password" placeholder="Пароль" />
+<button @onclick="Authorize">Войти</button>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="text-danger">@ErrorMessage</div>
+}
+
+@code {
+    private string Username = "";
+    private string Password = "";
+    private string ErrorMessage = "";
+
+    private async Task Authorize()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/Movie/Authorization", new LoginModel
+            {
+                Login=Username,
+                Password=Password
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
+                Dispatcher.Dispatch(new LoginAction(tokenResponse!.Token));
+                ErrorMessage = $"{tokenResponse}";
+            }
+            else
+            {
+                ErrorMessage = "Неверный логин или пароль";
+            }
+        }
+        catch
+        {
+            ErrorMessage = "Ошибка при входе";
+        }
+    }
+
+    private class TokenResponse
+    {
+        public string Token { get; set; } = "";
+    }
+    public class LoginModel
+    {
+        public string Login { get; set; }
+        public string Password { get; set; }
+    }
+}
