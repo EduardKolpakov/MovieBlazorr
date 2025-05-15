@@ -1,0 +1,73 @@
+﻿@page "/movies"
+@using System.Globalization
+@using Classes
+@inject IMovieApiService _movieService;
+
+<div class="container mt-5">
+    <h2 class="mb-4 text-center">Фильмы</h2>
+
+    @if (Movies == null || Movies.Count == 0)
+    {
+        <div class="alert alert-info text-center">Нет доступных фильмов</div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            @foreach (var movie in Movies)
+            {
+                <div class="col">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">@movie.Name</h5>
+                            <p class="card-text text-muted">@movie.Description</p>
+                            <hr />
+                            <p><strong>Жанр:</strong> @movie.Genre</p>
+                            <p><strong>Дата выхода:</strong> @movie.PublishingDate.ToString("d MMMM yyyy", new CultureInfo("ru-RU"))</p>
+                            <p><strong>Рейтинг:</strong> ⭐ @movie.Rating.ToString("0.0")</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<MovieDto> Movies;
+    private string ErrorMessage = "";
+    protected override async Task OnInitializedAsync()
+    {
+        // Здесь можно загрузить данные с API
+        await LoadMoviesAsync();
+
+    }
+
+    private async Task LoadMoviesAsync()
+    {
+        try
+        {
+            var response = await _movieService.GetAllMovies();
+
+            if (response != null)
+            {
+
+                if (response != null && response.Count > 0)
+                {
+                    Movies = response;
+                }
+                else
+                {
+                    ErrorMessage = "Фильмы не найдены.";
+                }
+            }
+            else
+            {
+                ErrorMessage = "Ошибка при загрузке фильмов.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Произошла ошибка: {ex.Message}";
+        }
+    }
+}
