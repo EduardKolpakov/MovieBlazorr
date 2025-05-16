@@ -50,7 +50,7 @@
             {
                 var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
                 Dispatcher.Dispatch(new LoginAction(tokenResponse!.Token));
-                ErrorMessage = $"{tokenResponse}";
+                ErrorMessage = $"{AuthState.Value?.Jwt}";
             }
             else
             {

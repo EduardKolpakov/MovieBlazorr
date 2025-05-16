@@ -7,10 +7,11 @@ public static class AuthReducers
     [ReducerMethod]
     public static AuthState ReduceLoginAction(AuthState state, LoginAction action)
     {
-        return new AuthState(
-            isAuthenticated: true,
-            jwt: action.Jwt
-        );
+        return new AuthState
+        {
+            IsAuthenticated = true,
+            Jwt = action.Jwt
+        };
     }
 
     [ReducerMethod]

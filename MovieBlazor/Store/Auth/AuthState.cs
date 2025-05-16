@@ -2,8 +2,12 @@
 
 public class AuthState
 {
-    public bool IsAuthenticated { get; }
-    public string Jwt { get; }
+    public bool IsAuthenticated { get; set; }
+    public string Jwt { get; set; } = "";
+
+    public AuthState()
+    {
+    }
 
     public AuthState(bool isAuthenticated, string jwt)
     {

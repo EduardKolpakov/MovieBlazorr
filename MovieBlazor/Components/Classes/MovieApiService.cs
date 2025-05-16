@@ -1,4 +1,6 @@
-﻿using System.Net.Http.Json;
+﻿using MovieBlazor.Store.Auth;
+using System.Net.Http.Json;
+using static System.Net.WebRequestMethods;
 
 namespace MovieBlazor.Components.Classes
 {

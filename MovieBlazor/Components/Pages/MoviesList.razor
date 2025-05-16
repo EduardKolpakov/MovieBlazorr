@@ -1,8 +1,13 @@
 ﻿@page "/movies"
 @using System.Globalization
 @using Classes
-@inject IMovieApiService _movieService;
+@using Store.Auth
+@using Fluxor
+@rendermode InteractiveServer
+@inject IState<AuthState> AuthState
+@inject HttpClient Http
 
+Jwt: @AuthState.Value.Jwt
 <div class="container mt-5">
     <h2 class="mb-4 text-center">Фильмы</h2>
 
@@ -46,7 +51,7 @@
     {
         try
         {
-            var response = await _movieService.GetAllMovies();
+            var response = await GetAuthorizedRequestAsync("api/movie/getallmovies");
 
             if (response != null)
             {
@@ -69,5 +74,16 @@
         {
             ErrorMessage = $"Произошла ошибка: {ex.Message}";
         }
+    }
+    private async Task<HttpResponseMessage> GetAuthorizedRequestAsync(string url)
+    {
+        var token = AuthState.Value.Jwt;
+        if (!string.IsNullOrEmpty(token))
+        {
+            Http.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
+
+        return await Http.GetAsync(url);
     }
 }
