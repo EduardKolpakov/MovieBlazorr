@@ -1,9 +1,10 @@
 ﻿@page "/"
 @using Fluxor
+@using Classes;
 @using MovieBlazor.Store.Auth
 @inject IState<AuthState> AuthState
 @inject IDispatcher Dispatcher
-@inject HttpClient Http
+@inject IMovieApiService _movieService;
 @rendermode InteractiveServer
 <Fluxor.Blazor.Web.StoreInitializer/>
 
@@ -26,10 +27,6 @@
         </div>
     </div>
 </div>
-@if (!string.IsNullOrEmpty(ErrorMessage))
-{
-    <div class="text-danger">@ErrorMessage</div>
-}
 
 @code {
     private string Username = "";
@@ -40,17 +37,18 @@
     {
         try
         {
-            var response = await Http.PostAsJsonAsync("api/Movie/Authorization", new LoginModel
+            LoginModel loginModel = new LoginModel()
             {
-                Login=Username,
-                Password=Password
-            });
+                    Login = Username,
+                    Password = Password
+                };
+            var response = await _movieService.LoginAsync(loginModel);
 
-            if (response.IsSuccessStatusCode)
+            if (!string.IsNullOrEmpty(response.Token))
             {
-                var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
-                Dispatcher.Dispatch(new LoginAction(tokenResponse!.Token));
-                ErrorMessage = $"{tokenResponse}";
+                string token = response.Token;
+                Dispatcher.Dispatch(new LoginAction(token));
+                ErrorMessage = $"Авторизация успешна! Добро пожаловать, {Username}!";
             }
             else
             {
@@ -61,15 +59,5 @@
         {
             ErrorMessage = "Ошибка при входе";
         }
-    }
-
-    private class TokenResponse
-    {
-        public string Token { get; set; }
-    }
-    public class LoginModel
-    {
-        public string Login { get; set; }
-        public string Password { get; set; }
     }
 }

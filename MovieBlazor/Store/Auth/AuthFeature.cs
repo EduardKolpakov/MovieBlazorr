@@ -1,11 +1,11 @@
-﻿using Fluxor;
+﻿//using Fluxor;
 
-namespace MovieBlazor.Store.Auth;
+//namespace MovieBlazor.Store.Auth;
 
-public class AuthFeature : Feature<AuthState>
-{
-    public override string GetName() => "auth";
+//public class AuthFeature : Feature<AuthState>
+//{
+//    public override string GetName() => "auth";
 
-    protected override AuthState GetInitialState()
-        => new AuthState(isAuthenticated: false, "");
-}
+//    protected override AuthState GetInitialState()
+//        => new AuthState(isAuthenticated: false, "");
+//}

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Fluxor" Version="6.6.0" />
+    <PackageReference Include="Fluxor.Blazor.Web" Version="6.6.0" />
   </ItemGroup>
 
 </Project>

@@ -9,13 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFluxor(options => options.ScanAssemblies(typeof(Program).Assembly));
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-builder.Services.AddTransient<AuthAwareHttpClientHandler>();
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:5105") });
 builder.Services.AddHttpClient<IMovieApiService, MovieApiService>((sp, client) =>
 {
     client.BaseAddress = new Uri("http://localhost:5105"); // замени на свой адрес
-})
-.AddHttpMessageHandler<AuthAwareHttpClientHandler>();
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

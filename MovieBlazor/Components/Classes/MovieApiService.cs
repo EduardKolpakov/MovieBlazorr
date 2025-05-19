@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace MovieBlazor.Components.Classes
 {
@@ -11,12 +12,24 @@ namespace MovieBlazor.Components.Classes
             _http = http;
         }
 
-        public async Task<List<MovieDto>> GetAllMovies()
+
+        public async Task<List<MovieDto>> GetAllMovies(string token)
         {
-            var response = await _http.GetAsync("api/movie/getallmovies");
+            using var request = new HttpRequestMessage(HttpMethod.Get, "api/movie/getallmovies");
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var response = await _http.SendAsync(request, CancellationToken.None);
+
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadFromJsonAsync<List<MovieDto>>() ?? new List<MovieDto>();
+                // Сначала десериализуем весь ответ
+                var apiResponse = await response.Content.ReadFromJsonAsync<MovieApiResponse>();
+
+                return apiResponse?.Data.movies ?? new List<MovieDto>();
             }
 
             throw new Exception("Ошибка при загрузке фильмов");
@@ -59,6 +72,28 @@ namespace MovieBlazor.Components.Classes
             }
 
             throw new Exception("Ошибка при обновлении фильма");
+        }
+        public async Task<AuthResponse> LoginAsync(LoginModel model)
+        {
+            var response = await _http.PostAsJsonAsync("api/movie/authorization", model);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
+                return authResponse;
+            }
+
+            throw new Exception("Ошибка при входе");
+        }
+        public class MovieApiResponse
+        {
+            public MovieApiData Data { get; set; }
+            public bool Status { get; set; }
+        }
+
+        public class MovieApiData
+        {
+            public List<MovieDto> movies { get; set; } = new();
         }
     }
 }
