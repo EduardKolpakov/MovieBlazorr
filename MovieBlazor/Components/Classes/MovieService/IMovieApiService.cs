@@ -8,5 +8,7 @@
         Task<MovieDto> CreateMovie(MovieDto movie);
         Task<MovieDto> UpdateMovie(int id, MovieDto movie);
         Task<AuthResponse> LoginAsync(LoginModel model);
+        Task<List<UserContext>> GetAllUsers();
+        Task<bool> GetChatWithUser(int SenderId, int ReceiverId);
     }
 }

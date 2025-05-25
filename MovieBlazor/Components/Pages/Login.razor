@@ -4,7 +4,8 @@
 @using MovieBlazor.Store.Auth
 @inject IState<AuthState> AuthState
 @inject IDispatcher Dispatcher
-@inject IMovieApiService _movieService;
+@inject IMovieApiService _movieService
+@inject IUserService _userService
 @rendermode InteractiveServer
 <Fluxor.Blazor.Web.StoreInitializer/>
 
@@ -21,7 +22,14 @@
 
                 @if (!string.IsNullOrEmpty(ErrorMessage))
                 {
-                    <div class="alert alert-danger mt-3 mb-0">@ErrorMessage</div>
+                    if (IsError)
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">@ErrorMessage</div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-success mt-3 mb-0">@ErrorMessage</div>
+                    }
                 }
             </div>
         </div>
@@ -32,6 +40,10 @@
     private string Username = "";
     private string Password = "";
     private string ErrorMessage = "";
+    private bool IsError = false;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; }
 
     private async Task Authorize()
     {
@@ -39,16 +51,24 @@
         {
             LoginModel loginModel = new LoginModel()
             {
-                    Login = Username,
-                    Password = Password
-                };
+                Login = Username,
+                Password = Password
+            };
+
             var response = await _movieService.LoginAsync(loginModel);
 
             if (!string.IsNullOrEmpty(response.Token))
             {
                 string token = response.Token;
                 Dispatcher.Dispatch(new LoginAction(token));
+                _userService.UpdateFromJwt(token);
                 ErrorMessage = $"Авторизация успешна! Добро пожаловать, {Username}!";
+                StateHasChanged();
+                // Показываем сообщение 3 секунды, потом переходим
+                await Task.Delay(3000);
+
+                // Укажи здесь нужный маршрут, например:
+                NavigationManager.NavigateTo("/movies"); // <-- замени на нужный тебе маршрут
             }
             else
             {

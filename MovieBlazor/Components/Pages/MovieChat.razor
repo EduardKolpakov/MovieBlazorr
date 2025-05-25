@@ -1,0 +1,129 @@
+﻿@page "/chat/movie/{MovieId:int}"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Timers
+@using System.Globalization
+@using Fluxor
+@using MovieBlazor.Components.Classes
+@using MovieBlazor.Store.Auth
+@inject NavigationManager NavManager
+@inject IMovieApiService MovieService
+@inject IUserService _userService
+@inject IJSRuntime JSRuntime
+
+@if (MovieInfo == null)
+{
+    <p>Загрузка информации о фильме...</p>
+}
+else
+{
+<PageTitle>Чат фильма @MovieInfo.Name</PageTitle>
+
+<div class="container mt-4">
+        <a class="btn btn-primary" href="/movies" style="position: absolute; top: 8px; left: 25px; z-index: 1000;">
+            ← Назад к фильмам
+        </a>
+    <h4>Чат фильма: @MovieInfo.Name</h4>
+    <hr />
+
+    <div class="chat-box mb-3" style="height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
+        @if (Messages != null && Messages.Count > 0)
+        {
+                @foreach (var msg in Messages.ToList().OrderBy(m => m.Timestamp).ThenBy(m => m.Id))
+                {
+                    <div>
+                        <strong>@msg.UserName</strong> (@msg.Timestamp.ToString("HH:mm")):
+                        <div>@msg.Message</div>
+                    </div>
+                }
+        }
+        else
+        {
+            <em>Нет сообщений.</em>
+        }
+    </div>
+
+    <div class="input-group">
+        <input @bind="NewMessage" type="text" class="form-control" placeholder="Введите сообщение..." />
+        <button class="btn btn-primary" @onclick="SendMessage">Отправить</button>
+    </div>
+</div>
+}
+@code {
+    [Parameter]
+    public int MovieId { get; set; }
+    public MovieDto MovieInfo { get; set; }
+    private List<MovieChatMessage> Messages { get; set; } = new();
+    private string NewMessage { get; set; } = "";
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        MovieInfo = await MovieService.GetMovie(MovieId);
+        await ConnectToSignalR();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.InvokeAsync("LeaveMovieChat", MovieId);
+            Messages.Clear();
+            await hubConnection.InvokeAsync("JoinMovieChat", MovieId);
+        }
+    }
+
+    private async Task ConnectToSignalR()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.StopAsync();
+            await hubConnection.DisposeAsync();
+        }
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5105/chatHub")
+            .Build();
+
+        hubConnection.On<string, string, string>("ReceiveMovieMessage", (userName, message, time) =>
+        {
+            var parsedTime = DateTime.Parse(time);
+
+            var msg = new MovieChatMessage
+            {
+                UserName = userName,
+                Message = message,
+                Timestamp = parsedTime
+            };
+
+            Messages.Add(msg);
+            _ = InvokeAsync(() =>
+                {
+                    StateHasChanged();
+                });
+        });
+
+        Messages.Clear();
+
+        await hubConnection.StartAsync();
+        await hubConnection.InvokeAsync("JoinMovieChat", MovieId);
+    }
+
+    private async Task SendMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(NewMessage))
+        {
+            await hubConnection.InvokeAsync("SendMovieMessage", MovieId, _userService.CurrentUser.name, NewMessage);
+            NewMessage = "";
+        }
+    }
+
+    public class MovieChatMessage
+    {
+        public int Id { get; set; }
+        public int MovieId { get; set; }
+        public string UserName { get; set; } = "";
+        public string Message { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+    }
+}

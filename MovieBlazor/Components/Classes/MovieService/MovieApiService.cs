@@ -85,6 +85,29 @@ namespace MovieBlazor.Components.Classes
 
             throw new Exception("Ошибка при входе");
         }
+
+        public async Task<List<UserContext>> GetAllUsers()
+        {
+            var response = await _http.GetAsync("api/movie/GetAllUsers");
+            if (response.IsSuccessStatusCode)
+            {
+                var usersResponse = await response.Content.ReadFromJsonAsync<UserApiResponse>();
+                return usersResponse.Users;
+            }
+            throw new Exception("АШИПКА");
+        }
+
+        public async Task<bool> GetChatWithUser(int SenderId, int ReceiverId)
+        {
+            var response = await _http.GetAsync($"api/movie/GetChatWithUser/{SenderId}/{ReceiverId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<GetChatResponse>();
+                return result.result;
+            }
+            throw new Exception("АШИПКА");
+        }
+
         public class MovieApiResponse
         {
             public MovieApiData Data { get; set; }
@@ -94,6 +117,17 @@ namespace MovieBlazor.Components.Classes
         public class MovieApiData
         {
             public List<MovieDto> movies { get; set; } = new();
+        }
+
+        public class UserApiResponse
+        { 
+            public List<UserContext> Users { get; set; }
+            public bool Status { get; set; }
+        }
+        public class GetChatResponse
+        { 
+            public bool result { get; set; }
+            public bool Status { get; set; }
         }
     }
 }

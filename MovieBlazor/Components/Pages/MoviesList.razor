@@ -8,7 +8,13 @@
 @inject IMovieApiService _movieService
 
 <div class="container mt-5">
-    <h2 class="mb-4 text-center">Фильмы</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Фильмы</h2>
+        <!-- Кнопка "Личные чаты" -->
+        <a class="btn btn-primary" href="/chats">
+            💬 Личные чаты
+        </a>
+    </div>
 
     @if (!string.IsNullOrEmpty(ErrorMessage))
     {
@@ -37,6 +43,9 @@
                             <p><strong>Жанр:</strong> @movie.Genre</p>
                             <p><strong>Дата выхода:</strong> @movie.PublishingDate.ToString("d MMMM yyyy", new CultureInfo("ru-RU"))</p>
                             <p><strong>Рейтинг:</strong> ⭐ @movie.Rating.ToString("0.0")</p>
+                        </div>
+                        <div class="card-footer">
+                            <a class="btn btn-primary w-100" href="/chat/movie/@movie.ID_Movie">Обсудить</a>
                         </div>
                     </div>
                 </div>

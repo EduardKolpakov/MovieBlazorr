@@ -1,0 +1,104 @@
+﻿@page "/chats"
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using Microsoft.AspNetCore.SignalR.Client
+@using MovieBlazor.Components.Classes
+@inject IJSRuntime JSRuntime
+@inject IUserService _userService
+@inject IMovieApiService _movieService
+@inject NavigationManager NavManager
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Личные чаты</h2>
+
+        <!-- Кнопка "Добавить чат" -->
+        <div class="dropdown position-relative">
+            <button class="btn btn-primary dropdown-toggle" @onclick="ToggleDropdown">
+                Новый чат
+            </button>
+            @if (ShowDropdown)
+            {
+                <div class="dropdown-menu show shadow-sm border" style="position: absolute; z-index: 1000; max-height: 200px; overflow-y: auto;">
+                    @foreach (var user in Users.Where(u => u.iD_User != _userService.CurrentUser.iD_User && !UserHasChat.Contains(u.iD_User)))
+                    {
+                        <button class="dropdown-item" @onclick="() => StartChatWithUser(user.iD_User)">
+                            @user.name
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (UsersWithChats == null || UserHasChat == null)
+    {
+        <p>Загрузка...</p>
+    }
+    else if (UsersWithChats.Count == 0)
+    {
+        <div class="alert alert-info">Нет активных чатов.</div>
+    }
+    else
+    {
+        <div class="list-group">
+            @foreach (var user in UsersWithChats)
+            {
+                <a href="/chat/user/@user.iD_User" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <span>@user.name</span>
+                    <span class="badge bg-primary rounded-pill">💬</span>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<UserContext> Users { get; set; } = new();
+    private List<UserContext> UsersWithChats { get; set; } = new();
+    private List<int> UserHasChat { get; set; } = new();
+    private bool ShowDropdown = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загружаем всех пользователей
+        var allUsers = await _movieService.GetAllUsers();
+        Users = allUsers.ToList();
+
+        // Текущий пользователь
+        var currentUserId = _userService.CurrentUser.iD_User;
+
+        // Проверяем, есть ли чат с каждым пользователем
+        foreach (var user in Users.Where(u => u.iD_User != currentUserId))
+        {
+            try
+            {
+                var hasChat = await _movieService.GetChatWithUser(currentUserId, user.iD_User);
+                if (hasChat)
+                {
+                    UserHasChat.Add(user.iD_User);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при проверке чата с пользователем {user.iD_User}: {ex.Message}");
+            }
+        }
+
+        // Фильтруем пользователей, с которыми есть чат
+        UsersWithChats = Users
+            .Where(u => u.iD_User != currentUserId && UserHasChat.Contains(u.iD_User))
+            .ToList();
+    }
+
+    private void ToggleDropdown()
+    {
+        ShowDropdown = !ShowDropdown;
+    }
+
+    private void StartChatWithUser(int userId)
+    {
+        ShowDropdown = false;
+        NavManager.NavigateTo($"/chat/user/{userId}");
+    }
+}
