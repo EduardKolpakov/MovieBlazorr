@@ -1,0 +1,189 @@
+﻿@page "/admin/chat/movie/{MovieId:int}"
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using Microsoft.AspNetCore.SignalR.Client
+@using MovieBlazor.Components.Classes
+@inject IJSRuntime JSRuntime
+@inject IUserService _userService
+@inject IMovieApiService _movieService
+@inject NavigationManager NavManager
+
+@if (MovieInfo == null)
+{
+    <p>Загрузка информации о фильме...</p>
+}
+else
+{
+    <PageTitle>Чат фильма @MovieInfo.Name (админ)</PageTitle>
+
+    <div class="container mt-4 position-relative">
+        <a class="btn btn-secondary mb-3" href="/admin/chat">← Назад к списку</a>
+        <h4>Чат фильма: @MovieInfo.Name</h4>
+        <hr />
+
+        <!-- Область сообщений -->
+        <div id="chatBox"
+             class="chat-box mb-3 p-3 border rounded"
+             style="height: 500px; overflow-y: auto;"
+             @ref="chatBoxRef">
+            @if (Messages != null && Messages.Count > 0)
+            {
+                @foreach (var msg in Messages.OrderBy(m => m.Timestamp))
+                {
+                    <div class="mb-2 d-flex @(IsMyMessage(msg) ? "justify-content-end" : "justify-content-start")">
+                        <div class="p-2 rounded-3 bg-@(IsMyMessage(msg) ? "primary text-white" : "light")"
+                             style="max-width: 70%;">
+                            <strong>@msg.UserName</strong> (@msg.Timestamp.ToString("HH:mm")):<br />
+                            @if (IsMyMessage(msg))
+                            {
+                                <input class="form-control form-control-sm my-1" @bind="msg.Message" />
+                            }
+                            else
+                            {
+                                @msg.Message
+                            }
+
+                            <div class="text-end mt-1">
+                                <button class="btn btn-danger btn-sm" @onclick="() => DeleteMessage(msg.Id)">🗑 Удалить</button>
+                                @if (!IsMyMessage(msg))
+                                {
+                                    <button class="btn btn-warning btn-sm ms-1" @onclick="() => EditMessage(msg)">✏️ Редактировать</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <em>Нет сообщений.</em>
+            }
+        </div>
+
+        <div class="input-group">
+            <input @bind="NewMessage" type="text" class="form-control" placeholder="Введите сообщение..." />
+            <button class="btn btn-primary" @onclick="SendMessage">Отправить</button>
+        </div>
+    </div>
+}
+@code {
+    [Parameter]
+    public int MovieId { get; set; }
+
+    public MovieDto MovieInfo { get; set; }
+    private List<AdminChatMessage> Messages { get; set; } = new();
+    private string NewMessage { get; set; } = "";
+    private HubConnection? hubConnection;
+    private ElementReference chatBoxRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        MovieInfo = await _movieService.GetMovie(MovieId);
+        await LoadChatHistory();
+        await ConnectToSignalR();
+    }
+
+    private async Task LoadChatHistory()
+    {
+        var history = await _movieService.GetChatHistory(MovieId);
+        Messages = history.Select(m => new AdminChatMessage
+            {
+                Id = m.Id,
+                UserName = m.UserName,
+                Message = m.Message,
+                Timestamp = m.Timestamp
+            }).ToList();
+    }
+
+    private async Task ConnectToSignalR()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.StopAsync();
+            await hubConnection.DisposeAsync();
+        }
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5105/chatHub")
+            .Build();
+
+        hubConnection.On<string, string, string>("ReceiveMovieMessage", async (userName, message, time) =>
+        {
+            var parsedTime = DateTime.Parse(time);
+
+            var msg = new AdminChatMessage
+                {
+                    UserName = userName,
+                    Message = message,
+                    Timestamp = parsedTime
+                };
+
+            Messages.Add(msg);
+            await InvokeAsync(() =>
+            {
+                StateHasChanged();
+                ScrollToBottom();
+            });
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.InvokeAsync("JoinMovieChat", MovieId);
+    }
+
+    private async Task SendMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(NewMessage))
+        {
+            await hubConnection.InvokeAsync("SendMovieMessage", MovieId, _userService.CurrentUser.name, NewMessage);
+            NewMessage = "";
+        }
+    }
+
+    private bool IsMyMessage(AdminChatMessage msg)
+    {
+        return msg.UserName == _userService.CurrentUser.name;
+    }
+
+    private void ScrollToBottom()
+    {
+        JSRuntime.InvokeVoidAsync("scrollToBottomSmooth", "chatBox");
+    }
+
+    private async Task DeleteMessage(int messageId)
+    {
+        try
+        {
+            await _movieService.DeleteMessage(messageId);
+            var msg = Messages.FirstOrDefault(m => m.Id == messageId);
+            if (msg != null)
+            {
+                Messages.Remove(msg);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка при удалении сообщения: {ex.Message}");
+        }
+    }
+
+    private async Task EditMessage(AdminChatMessage msg)
+    {
+        // Здесь можно открыть модальное окно или использовать InputText
+        var updatedMsg = await JSRuntime.InvokeAsync<string>("prompt", "Измените сообщение:", msg.Message);
+        if (!string.IsNullOrWhiteSpace(updatedMsg))
+        {
+            await _movieService.UpdateMessage(msg.Id, updatedMsg);
+            msg.Message = updatedMsg;
+            StateHasChanged();
+        }
+    }
+
+    public class AdminChatMessage
+    {
+        public int Id { get; set; }
+        public string UserName { get; set; } = "";
+        public string Message { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+    }
+}

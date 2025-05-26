@@ -1,4 +1,6 @@
-﻿namespace MovieBlazor.Components.Classes
+﻿using System.Runtime.CompilerServices;
+
+namespace MovieBlazor.Components.Classes
 {
     public interface IMovieApiService
     {
@@ -10,5 +12,9 @@
         Task<AuthResponse> LoginAsync(LoginModel model);
         Task<List<UserContext>> GetAllUsers();
         Task<bool> GetChatWithUser(int SenderId, int ReceiverId);
+        Task<UserContext> GetUserById(int id);
+        Task<List<MessageDto>> GetChatHistory(int movieId);
+        Task<MessageDto> UpdateMessage(int id, string msg);
+        Task<bool> DeleteMessage(int id);
     }
 }

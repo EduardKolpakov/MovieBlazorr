@@ -108,6 +108,44 @@ namespace MovieBlazor.Components.Classes
             throw new Exception("АШИПКА");
         }
 
+        public async Task<UserContext> GetUserById(int id)
+        {
+            var response = await _http.GetAsync($"api/movie/GetUserById/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UserByIdResponse>();
+                return result.user;
+            }
+            throw new Exception("АШИПКА");
+        }
+
+        public async Task<List<MessageDto>> GetChatHistory(int movieId)
+        {
+            var response = await _http.GetAsync($"api/movie/GetChatHistory{movieId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ChatHistoryResponse>();
+                return result.messagees;
+            }
+            throw new Exception("АШИПКА");
+        }
+
+        public Task<MessageDto> UpdateMessage(int id, string msg)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> DeleteMessage(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public class ChatHistoryResponse
+        {
+            public List<MessageDto> messagees { get; set; }
+            public bool status { get; set; }
+        }
+
         public class MovieApiResponse
         {
             public MovieApiData Data { get; set; }
@@ -128,6 +166,11 @@ namespace MovieBlazor.Components.Classes
         { 
             public bool result { get; set; }
             public bool Status { get; set; }
+        }
+        public class UserByIdResponse
+        { 
+            public UserContext user { get; set; }
+            public bool status { get; set; }
         }
     }
 }

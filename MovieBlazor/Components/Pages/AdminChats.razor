@@ -1,0 +1,48 @@
+﻿@page "/admin/chat"
+@rendermode InteractiveServer
+@using MovieBlazor.Components.Classes
+@using System.Globalization
+@inject IMovieApiService _movieService
+@inject NavigationManager NavManager
+
+<h3>Админ-панель: Чаты фильмов</h3>
+
+@if (Movies == null)
+{
+    <p>Загрузка...</p>
+}
+else if (Movies.Count == 0)
+{
+    <div class="alert alert-info">Нет доступных фильмов.</div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        @foreach (var movie in Movies)
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">@movie.Name</h5>
+                        <p class="card-text text-muted">@movie.Description</p>
+                        <hr />
+                        <p><strong>Жанр:</strong> @movie.Genre</p>
+                        <p><strong>Дата выхода:</strong> @movie.PublishingDate.ToString("d MMMM yyyy", new CultureInfo("ru-RU"))</p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="btn btn-primary w-100" href="/admin/chat/movie/@movie.ID_Movie">Перейти в чат</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+@code {
+    private List<MovieDto> Movies { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var movies = await _movieService.GetAllMovies(null);
+        Movies = movies.ToList();
+    }
+}

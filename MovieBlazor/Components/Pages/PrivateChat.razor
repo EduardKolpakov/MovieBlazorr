@@ -1,0 +1,137 @@
+﻿@page "/chat/user/{UserId:int}"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Security.Claims
+@using MovieBlazor.Components.Classes
+@inject IJSRuntime JSRuntime
+@inject IUserService _userService
+@inject IMovieApiService _movieService
+@inject NavigationManager NavManager
+
+@if (OtherUser == null)
+{
+    <p>Загрузка пользователя...</p>
+}
+else
+{
+    <PageTitle>Чат с @OtherUser.name</PageTitle>
+    <a class="btn btn-primary mb-3" href="/chats" style="position: absolute; top: 8px; left: 25px; z-index: 1000;">← Назад к чатам</a>
+    <div class="container mt-4 position-relative">
+        <!-- Кнопка назад -->
+
+        <!-- Заголовок -->
+        <h4>Чат с @OtherUser.name</h4>
+        <hr />
+
+        <!-- Область сообщений -->
+        <div id="chatBox"
+        class="chat-box mb-3 p-3 border rounded"
+        style="height: 400px; overflow-y: auto;"
+        @ref="chatBoxRef">
+            @if (Messages != null && Messages.Count > 0)
+            {
+                @foreach (var msg in Messages.OrderBy(m => m.Timestamp))
+                {
+                    <div class="mb-2 @(IsMyMessage(msg) ? "text-end" : "")">
+                        <div class="d-inline-block p-2 rounded-3 bg-@(IsMyMessage(msg) ? "primary text-white" : "light")"
+                        style="max-width: 75%;">
+                            <strong>@msg.SenderName</strong><br />
+                            @msg.Message
+                            <small class="d-block mt-1">@msg.Timestamp.ToString("HH:mm")</small>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <em>Нет сообщений.</em>
+            }
+        </div>
+
+        <!-- Поле ввода -->
+        <div class="input-group">
+            <input @bind="NewMessage" type="text" class="form-control" placeholder="Введите сообщение..." @onkeypress="HandleKeyPress" />
+            <button class="btn btn-primary" @onclick="SendMessage">Отправить</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int UserId { get; set; }
+    private UserContext curUs;
+    private UserContext OtherUser { get; set; }
+    private List<PrivateChatMessage> Messages { get; set; } = new();
+    private string NewMessage { get; set; } = "";
+    private HubConnection hubConnection;
+    private ElementReference chatBoxRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        curUs = _userService.CurrentUser;
+        OtherUser = await _movieService.GetUserById(UserId);
+        await ConnectToSignalR();
+    }
+
+    private async Task ConnectToSignalR()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5105/chatHub")
+            .Build();
+
+        hubConnection.On<string, string, string, string>("ReceivePrivateMessage", async (senderId, senderName, message, time) =>
+        {
+            var parsedTime = DateTime.Parse(time);
+
+            var msg = new PrivateChatMessage
+                {
+                    SenderId = senderId,
+                    SenderName = senderName,
+                    ReceiverId = UserId.ToString(),
+                    Message = message,
+                    Timestamp = parsedTime
+                };
+
+            Messages.Add(msg);
+            await InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.InvokeAsync("JoinPrivateChat", curUs.iD_User.ToString(), OtherUser.iD_User.ToString());//needfix
+    }
+
+    private bool IsMyMessage(PrivateChatMessage msg)
+    {
+        return msg.SenderId == _userService.CurrentUser.iD_User.ToString();
+    }
+
+    private async Task SendMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(NewMessage))
+        {
+            await hubConnection.InvokeAsync("SendPrivateMessage", curUs.iD_User.ToString(), OtherUser.iD_User.ToString(), _userService.CurrentUser.name, NewMessage);
+            NewMessage = "";
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
+    }
+
+    public class PrivateChatMessage
+    {
+        public int Id { get; set; }
+        public string SenderId { get; set; }
+        public string SenderName { get; set; }
+        public string ReceiverId { get; set; }
+        public string Message { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+}
