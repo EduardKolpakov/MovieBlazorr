@@ -26,6 +26,7 @@ namespace MovieBlazor.Components.Classes
 
             var roleIdStr = claims.FirstOrDefault(c => c.Type == "ID_Role")?.Value;
             _userContext.iD_Role = int.TryParse(roleIdStr, out var roleId) ? roleId : -1;
+            _userContext.isAdmin = _userContext.iD_Role == 1;
         }
     }
 }

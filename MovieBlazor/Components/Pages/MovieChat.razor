@@ -29,11 +29,25 @@ else
     <div class="chat-box mb-3" style="height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
         @if (Messages != null && Messages.Count > 0)
         {
-                @foreach (var msg in Messages.ToList().OrderBy(m => m.Timestamp).ThenBy(m => m.Id))
+                @foreach (var msg in Messages.OrderBy(m => m.Timestamp))
                 {
-                    <div>
+                    <div class="mb-2">
                         <strong>@msg.UserName</strong> (@msg.Timestamp.ToString("HH:mm")):
-                        <div>@msg.Message</div>
+                        @if (IsAdmin || msg.UserName == _userService.CurrentUser.name)
+                        {
+                            <span class="badge bg-warning text-dark">Вы можете редактировать это сообщение</span>
+                        }
+                        <div class="border p-2 rounded" style="display: inline-block; max-width: 80%;">
+                            @msg.Message
+                        </div>
+
+                        @if (IsAdmin || msg.UserName == _userService.CurrentUser.name)
+                        {
+                            <div class="mt-1">
+                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditMessage(msg)">✏️ Редактировать</button>
+                                <button class="btn btn-danger btn-sm" @onclick="() => DeleteMessage(msg.Id)">🗑 Удалить</button>
+                            </div>
+                        }
                     </div>
                 }
         }
@@ -56,11 +70,13 @@ else
     private List<MovieChatMessage> Messages { get; set; } = new();
     private string NewMessage { get; set; } = "";
     private HubConnection? hubConnection;
+    private bool IsAdmin;
 
     protected override async Task OnInitializedAsync()
     {
         MovieInfo = await MovieService.GetMovie(MovieId);
         await ConnectToSignalR();
+        IsAdmin = _userService.CurrentUser.isAdmin;
     }
 
     protected override async Task OnParametersSetAsync()
@@ -85,14 +101,15 @@ else
             .WithUrl("http://localhost:5105/chatHub")
             .Build();
 
-        hubConnection.On<string, string, string>("ReceiveMovieMessage", (userName, message, time) =>
+        hubConnection.On<string, MovieChatMessage, string>("ReceiveMovieMessage", (userName, message, time) =>
         {
             var parsedTime = DateTime.Parse(time);
 
             var msg = new MovieChatMessage
             {
+                Id = message.Id,
                 UserName = userName,
-                Message = message,
+                Message = message.Message,
                 Timestamp = parsedTime
             };
 
@@ -101,6 +118,21 @@ else
                 {
                     StateHasChanged();
                 });
+        });
+        hubConnection.On<int>("OnMessageDeleted", (messageId) =>
+        {
+            Messages.RemoveAll(m => m.Id == messageId);
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<int, string>("OnMessageUpdated", (messageId, newText) =>
+        {
+            var msg = Messages.FirstOrDefault(m => m.Id == messageId);
+            if (msg != null)
+            {
+                msg.Message = newText;
+                InvokeAsync(StateHasChanged);
+            }
         });
 
         Messages.Clear();
@@ -115,6 +147,23 @@ else
         {
             await hubConnection.InvokeAsync("SendMovieMessage", MovieId, _userService.CurrentUser.name, NewMessage);
             NewMessage = "";
+        }
+    }
+
+    private async Task DeleteMessage(int messageId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Вы уверены, что хотите удалить это сообщение?"))
+        {
+            await hubConnection.InvokeAsync("DeleteMovieMessage", messageId);
+        }
+    }
+
+    private async Task EditMessage(MovieChatMessage msg)
+    {
+        var newMessage = await JSRuntime.InvokeAsync<string>("prompt", "Измените сообщение:", msg.Message);
+        if (!string.IsNullOrWhiteSpace(newMessage))
+        {
+            await hubConnection.InvokeAsync("UpdateMovieMessage", msg.Id, newMessage);
         }
     }
 
