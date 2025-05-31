@@ -17,13 +17,8 @@ else
     <PageTitle>Чат с @OtherUser.name</PageTitle>
     <a class="btn btn-primary mb-3" href="/chats" style="position: absolute; top: 8px; left: 25px; z-index: 1000;">← Назад к чатам</a>
     <div class="container mt-4 position-relative">
-        <!-- Кнопка назад -->
-
-        <!-- Заголовок -->
         <h4>Чат с @OtherUser.name</h4>
         <hr />
-
-        <!-- Область сообщений -->
         <div id="chatBox"
         class="chat-box mb-3 p-3 border rounded"
         style="height: 400px; overflow-y: auto;"
@@ -47,8 +42,6 @@ else
                 <em>Нет сообщений.</em>
             }
         </div>
-
-        <!-- Поле ввода -->
         <div class="input-group">
             <input @bind="NewMessage" type="text" class="form-control" placeholder="Введите сообщение..." @onkeypress="HandleKeyPress" />
             <button class="btn btn-primary" @onclick="SendMessage">Отправить</button>

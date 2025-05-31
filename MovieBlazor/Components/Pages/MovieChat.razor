@@ -29,7 +29,7 @@ else
     <div class="chat-box mb-3" style="height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
         @if (Messages != null && Messages.Count > 0)
         {
-                @foreach (var msg in Messages.OrderBy(m => m.Timestamp))
+                @foreach (var msg in Messages.OrderBy(m => m.Timestamp).ThenBy(x => x.Id))
                 {
                     <div class="mb-2">
                         <strong>@msg.UserName</strong> (@msg.Timestamp.ToString("HH:mm")):

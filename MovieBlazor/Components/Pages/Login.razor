@@ -64,11 +64,8 @@
                 _userService.UpdateFromJwt(token);
                 ErrorMessage = $"Авторизация успешна! Добро пожаловать, {Username}!";
                 StateHasChanged();
-                // Показываем сообщение 3 секунды, потом переходим
                 await Task.Delay(3000);
-
-                // Укажи здесь нужный маршрут, например:
-                NavigationManager.NavigateTo("/movies"); // <-- замени на нужный тебе маршрут
+                NavigationManager.NavigateTo("/movies");
             }
             else
             {

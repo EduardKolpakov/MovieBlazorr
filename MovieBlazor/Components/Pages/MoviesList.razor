@@ -10,7 +10,6 @@
 <div class="container mt-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Фильмы</h2>
-        <!-- Кнопка "Личные чаты" -->
         <a class="btn btn-primary" href="/chats">
             💬 Личные чаты
         </a>
@@ -75,7 +74,7 @@
             if (response != null && response.Count > 0)
             {
                 Movies = response;
-                StateHasChanged(); // Обновляем UI
+                StateHasChanged();
             }
             else
             {

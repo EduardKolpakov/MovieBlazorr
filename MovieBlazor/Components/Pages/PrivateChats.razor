@@ -12,8 +12,6 @@
 <div class="container mt-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Личные чаты</h2>
-
-        <!-- Кнопка "Добавить чат" -->
         <div class="dropdown position-relative">
             <button class="btn btn-primary dropdown-toggle" @onclick="ToggleDropdown">
                 Новый чат
@@ -62,14 +60,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Загружаем всех пользователей
         var allUsers = await _movieService.GetAllUsers();
         Users = allUsers.ToList();
-
-        // Текущий пользователь
         var currentUserId = _userService.CurrentUser.iD_User;
-
-        // Проверяем, есть ли чат с каждым пользователем
         foreach (var user in Users.Where(u => u.iD_User != currentUserId))
         {
             try
@@ -85,8 +78,6 @@
                 Console.WriteLine($"Ошибка при проверке чата с пользователем {user.iD_User}: {ex.Message}");
             }
         }
-
-        // Фильтруем пользователей, с которыми есть чат
         UsersWithChats = Users
             .Where(u => u.iD_User != currentUserId && UserHasChat.Contains(u.iD_User))
             .ToList();
